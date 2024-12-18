@@ -1,3 +1,5 @@
+# url: https://hyve-ai.streamlit.app/
+
 import os
 import toml
 
@@ -40,13 +42,22 @@ os.environ['LANGCHAIN_PROJECT'] = st.secrets["Langchain"]["LANGCHAIN_PROJECT"]
 
 os.environ['OPENAI_API_KEY'] = st.secrets["OpenAI"]["OPENAI_API_KEY"]
 
-os.environ['UN_ADMIN'] = st.secrets["Credentials"]["UN_ADMIN"]
-os.environ['PW_ADMIN'] = st.secrets["Credentials"]["PW_ADMIN"]
-os.environ['UN_USER'] = st.secrets["Credentials"]["UN_USER"]
-os.environ['PW_USER'] = st.secrets["Credentials"]["PW_USER"]
+n_users = int(st.secrets["Credentials"]["N_USERS"])
+users = {}
+for i in range(1, n_users + 1):
+    username_key = f"UN_USER_{i}"
+    password_key = f"PW_USER_{i}"
+    if username_key in st.secrets["Credentials"] and password_key in st.secrets["Credentials"]:
+        users[st.secrets["Credentials"][username_key]] = st.secrets["Credentials"][password_key]
+
+if "UN_ADMIN" in st.secrets["Credentials"] and "PW_ADMIN" in st.secrets["Credentials"]:
+    users[st.secrets["Credentials"]["UN_ADMIN"]] = st.secrets["Credentials"]["PW_ADMIN"]
 
 
-# Session state handling for API key
+def check_credentials(username, password):
+    return username in users and users[username] == password
+
+# Session state handling for pw
 if 'pw_submitted' not in st.session_state:
     st.session_state['pw_submitted'] = False
 
@@ -55,9 +66,8 @@ if not st.session_state['pw_submitted']:
     pw = st.text_input("Password:", type="password", value="")
     submit_key = st.button("Login")
 
-    if submit_key and user and pw:
-        # st.session_state['api_key'] = api_key
-        if (user == os.environ['UN_USER'] and pw == os.environ['PW_USER']) or (user == os.environ['UN_ADMIN'] and pw == os.environ['PW_ADMIN']):
+    if submit_key and user and pw:    
+        if check_credentials(user, pw):
             st.session_state['pw_submitted'] = True
             st.rerun()  # Rerun the app to reflect the state change
         else:
